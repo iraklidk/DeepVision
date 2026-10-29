@@ -1,7 +1,5 @@
 # Cat vs Dog Classification — Technical Report
 
-> Complete this after running the experiments and replace the bracketed fields with your own results.
-
 ## 1. Problem statement
 The task is to classify an input image as either Cat or Dog. This is a binary image-classification problem.
 

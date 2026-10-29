@@ -1,0 +1,128 @@
+# Cat vs Dog Classifier
+
+This is a small computer-vision project that classifies pet images as cats or dogs. It uses a ResNet-18 model pretrained on ImageNet and the Oxford-IIIT Pet dataset.
+
+## Features
+
+- Oxford-IIIT Pet dataset download through `torchvision`
+- Binary mapping from 37 pet breeds to Cat/Dog
+- Stratified train/validation/test split (70% / 15% / 15%)
+- ImageNet normalization and training augmentation
+- Transfer learning with a frozen ResNet-18 backbone
+- Optional fine-tuning of ResNet-18's final feature block for comparison
+- Validation-loss checkpoint selection
+- Accuracy, precision, recall, F1, classification report, confusion matrix
+- Streamlit demo for uploaded images
+- Reproducible random seed and saved split indices
+
+## 1. Set up (Windows / VS Code)
+
+Open the VS Code terminal in this project folder. Create and activate a virtual environment if you want a clean environment:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install torch torchvision scikit-learn numpy pandas Pillow streamlit
+```
+
+If PowerShell blocks activation, you can use the Python interpreter in `.venv` directly, or configure your terminal policy according to your organization's rules. Make sure VS Code uses the same interpreter where the packages were installed.
+
+The project uses PyTorch, Torchvision, scikit-learn, NumPy, pandas, Pillow, and Streamlit. The command above installs them directly
+
+## 2. Train the baseline model
+
+```powershell
+python train.py --epochs 5 --batch-size 32 --run-name baseline
+```
+
+The first run downloads the dataset and pretrained ResNet-18 weights, so an internet connection is needed. On a CPU-only computer, training can take a while. Start with 3–5 epochs to test the pipeline.
+
+The code selects the checkpoint with the lowest validation loss and writes results to `outputs/baseline/`.
+
+## 3. Evaluate on the held-out test set
+
+Run this only after training:
+
+```powershell
+python evaluate.py --run-name baseline
+```
+
+The test set is not used to choose the best epoch. The script saves:
+- `test_metrics.json`
+- `classification_report.json`
+- `confusion_matrix.csv`
+- `test_predictions.csv`
+
+Use the metrics produced by your own run in the report.
+
+## 4. Launch the demo
+
+```powershell
+streamlit run app.py
+```
+
+The app expects `outputs/baseline/best_model.pth`. Upload a JPG, JPEG, PNG, or WebP image in the browser.
+
+## 5. Run a comparison experiment
+
+The baseline trains only the new classification head. To compare it with fine-tuning the final ResNet feature block:
+
+```powershell
+python train.py --epochs 5 --batch-size 32 --run-name fine_tune --unfreeze-last-block
+python evaluate.py --run-name fine_tune
+```
+
+This creates a separate run under `outputs/fine_tune/`. The two experiments use the same seed and data split, so you can compare their validation curves, macro-F1, class recall, training time, and checkpoint size. Fine-tuning is not guaranteed to improve the result.
+
+To run the demo with the fine-tuned model, edit this line near the top of `app.py`:
+
+```python
+RUN_NAME = "baseline"
+```
+
+Change `"baseline"` to `"fine_tune"` and restart Streamlit.
+
+## Project structure
+
+```text
+cat_dog_cv_project/
+├── app.py
+├── train.py
+├── evaluate.py
+├── README.md
+├── REPORT_TEMPLATE.md
+├── AI_DISCLOSURE.md
+├── src/
+│   ├── __init__.py
+│   ├── data.py
+│   └── model.py
+└── outputs/
+    └── .gitkeep
+```
+
+## How it works
+
+1. **Task:** Binary image classification, Cat vs Dog.
+2. **Dataset:** Oxford-IIIT Pet `trainval` split, containing breed-labeled pet images.
+3. **Labels:** Twelve cat breeds map to Cat; remaining breeds map to Dog.
+4. **Split:** Stratified 70/15/15 train/validation/test split with a fixed seed.
+5. **Preprocessing:** Random resized crop and horizontal flip for training; resize and center crop for validation/test; ImageNet channel normalization.
+6. **Model:** ImageNet-pretrained ResNet-18 with its original 1,000-class head replaced by a two-class linear layer.
+7. **Baseline training:** Freeze the pretrained feature extractor and train the new head using weighted cross-entropy and Adam.
+8. **Model selection:** Choose the checkpoint with lowest validation loss.
+9. **Evaluation:** Use the held-out test set once for final metrics; inspect class-wise metrics and the confusion matrix.
+10. **Comparison:** Fine-tune `layer4` and compare actual results against the frozen-backbone baseline.
+
+## Limitations
+
+- The cat/dog label is derived from the breed label, so check the breed list before changing the dataset code.
+- A model can fail on unusual poses, poor lighting, multiple animals, drawings, or images outside the training distribution.
+- The displayed softmax values are model scores, not calibrated probabilities or guarantees.
+- Results can vary with the hardware, library versions, random seed, and training settings.
+
+## Dataset and pretrained weights
+
+- Oxford-IIIT Pet: https://www.robots.ox.ac.uk/~vgg/data/pets/
+- Torchvision models documentation: https://pytorch.org/vision/stable/models.html
+- PyTorch documentation: https://pytorch.org/docs/stable/index.html

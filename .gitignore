@@ -1,0 +1,9 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+data/
+outputs/*
+!outputs/.gitkeep
+.streamlit/
+.DS_Store
